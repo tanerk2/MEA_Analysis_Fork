@@ -1,32 +1,36 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+
+# IMPORTANT INFO: make sure to change
 
 # make box and whisker plots for data over entire chip and bar plots for over one unit
-df = pd.read_excel('/Users/tanerkaraaslan/Desktop/Lab Coding Projects/MEA_Analysis/axon_analytics.xls')
-
+df = pd.read_excel('/mnt/disk15tb/Taner/axon_analytics_homozyg.xls')
+'''
 #box and whisker for velocities over entire chip
 column_name = 'velocity'
 df.boxplot(column=column_name)
-plt.title("Box and Whisker Plot of AP Velocities Over Entire Chip")
-plt.xlabel("All Units")
+#plt.title("Box and Whisker Plot of AP Velocities Over Entire Chip")
+plt.xlabel("Identified Putative Neurons")
 plt.ylabel('AP Velocities')
 plt.show()
 
 #box and whisker plot for branch lengths over entire chip
 column_name = 'length'
 df.boxplot(column=column_name)
-plt.title("Box and Whisker Plot of Branch Lengths Over Entire Chip")
-plt.xlabel("All Units")
-plt.ylabel('Branch Lengths')
+#plt.title("Box and Whisker Plot of Branch Lengths Over Entire Chip")
+plt.xlabel("Identified Putative Neurons")
+plt.ylabel('Axon Lengths')
 plt.show()
-
+'''
 
 # creating bar plot for Ap velocities over each unit
 # create new array which is an array of the arrays of velocities for each unitid
 unitID_column = df['unit_ids']
 velocity_column = df['velocity']
-currentID = 0
+currentID = 10
 velarray = []
 index = 0
 unique_values_count = df['unit_ids'].nunique()
@@ -41,17 +45,55 @@ for i in range(0, unique_values_count):
             inner_array_lengths = [len(inner_array) for inner_array in velarray]
             size = inner_array_lengths[i]
             index = index + size
+            '''
             #inputting 0 values to make same length arrays
             if size < 5:
                 for zeros in range(size, 5):
                     velarray[i].append(0)
+                    '''
             break
 
 
 # add last row manually ** need to figure out a way to get this inside the for loop
+
+
 velarray[i].append(velocity_column.loc[j])
-for j in range(0,3):
-    velarray[i].append(0)
+
+'''
+# isolating units with more than one branch
+value_to_remove = 0
+for unit in velarray:
+    while value_to_remove in unit:
+        unit.remove(value_to_remove)
+'''
+
+# list of indices which have more than one branch
+storedIndex = -1
+Newvelarray = []
+indexList = []
+for unit in velarray:
+    storedIndex += 1
+    if len(unit)!=1:
+        Newvelarray.append(unit)
+        indexList.append(storedIndex)
+
+unique_IDs = set(unitID_column)
+sorted_IDs = sorted(unique_IDs)
+
+UnitIDs = []
+for index in indexList:
+    UnitIDs.append(sorted_IDs[index])
+
+# inputting zeros to make all units the same size
+#inputting 0 values to make same length arrays
+count = -1
+for unit in Newvelarray:  
+    count +=1       
+    if len(unit) < 5:
+        for zeros in range(len(unit), 5):
+            Newvelarray[count].append(0)
+velarray = Newvelarray
+
 
 #separating branch values for velocity
 branch1Array = []
@@ -74,13 +116,10 @@ branch5Array = []
 for i in velarray:
     branch5Array.append(i[4])
 
-# obtaining each unique unitid and then sorting them in increasing order
-unique_IDs = set(unitID_column)
-sorted_IDs = sorted(unique_IDs)
 
 # generating the bar plot
 myData = {
-    'Category': sorted_IDs,
+    'Category': UnitIDs,
     'Branch1': branch1Array,
     'Branch2': branch2Array,
     'Branch3': branch3Array,
@@ -107,23 +146,58 @@ plt.bar([pos + 4*bar_width for pos in positions], df['Branch5'], width=bar_width
 # Add more plt.bar() calls for additional sets of bars
 
 # Add labels, title, and legend
-plt.xlabel('UnitID')
-plt.ylabel('Velocity')
-plt.title('Grouped Bar Plot')
+plt.xlabel('Identified Putative Neuron')
+plt.ylabel('AP Velocity')
+#plt.title('Grouped Bar Plot')
 plt.xticks([pos + bar_width / 10 for pos in positions], df['Category'])
 plt.legend()
 plt.tick_params(axis='both', which='major', labelsize=6)
 # Show the plot
+plt.savefig('AP Velocities Bar Plot.jpg', dpi=600, format='jpg')
 plt.show()
 
+# flattening velarray 
+
+# Flatten the larger array to remove inner arrays
+flattenedvelarray = [item for sublist in velarray for item in sublist]
+zero = 0
+while zero in flattenedvelarray:
+    flattenedvelarray.remove(zero)
+arraySize = (len(flattenedvelarray), 1)
+ones = np.ones(arraySize)
+#box and whisker for velocities over entire chip
+y0 = flattenedvelarray
+df = pd.DataFrame({'Identified_Putative_Neurons':[' ']*len(y0), 'AP_Velocities': y0, 'color':np.random.choice([0,1,2,3,4,5,6,7,8,9], size=len(y0), replace=True)})
+fig = px.strip(df,
+         x='Identified_Putative_Neurons',
+         y='AP_Velocities',
+         color='color',
+         stripmode='overlay')
+fig.add_trace(go.Box(y=df.query('Identified_Putative_Neurons == " "')['AP_Velocities'], name=' '))
+fig.update_layout(autosize=False,
+                  width=600,
+                  height=600,
+                  legend={'traceorder':'normal'})
+
+fig.show()
+'''
+plt.boxplot(flattenedvelarray, showfliers = True)
+plt.scatter(ones, flattenedvelarray, marker = 'o')
+#plt.title("Box and Whisker Plot of AP Velocities Over Entire Chip")
+plt.xlabel("Identified Putative Neurons")
+plt.ylabel('AP Velocities')
+plt.xticks([])
+plt.savefig('AP Velocities Box and Whisker Plot.jpg', dpi=600, format='jpg')
+plt.show()
+'''
 # creating bar plot for branch lengths over each unit
 # redefine df because I redefined it earlier 
-df = pd.read_excel('/Users/tanerkaraaslan/Desktop/Lab Coding Projects/MEA_Analysis/axon_analytics.xls')
+df = pd.read_excel('/mnt/disk15tb/Taner/axon_analytics_homozyg.xls')
 
 # create new array which is an array of the arrays of velocities for each unitid
 unitID_column = df['unit_ids']
 length_column = df['length']
-currentID = 0
+currentID = 10
 lenarray = []
 index = 0
 unique_values_count = df['unit_ids'].nunique()
@@ -138,16 +212,48 @@ for i in range(0, unique_values_count):
             inner_array_lengths = [len(inner_array) for inner_array in lenarray]
             size = inner_array_lengths[i]
             index = index + size
+            '''
             #inputting 0 values to make same length arrays
             if size < 5:
                 for zeros in range(size, 5):
-                    lenarray[i].append(0)
+                    lenarray[i].append(0)'''
             break
 # add last row manually **need to figure out a way to get this inside the for loop
-lenarray[i].append(unitID_column.loc[j])
 lenarray[i].append(length_column.loc[j])
-for j in range(0,3):
-    lenarray[i].append(0)
+'''
+# isolating units with more than one branch
+value_to_remove = 0
+for unit in lenarray:
+    while value_to_remove in unit:
+        unit.remove(value_to_remove)
+'''
+# list of indices which have more than one branch
+storedIndex = -1
+Newlenarray = []
+indexList = []
+for unit in lenarray:
+    storedIndex += 1
+    if len(unit)!=1:
+        Newlenarray.append(unit)
+        indexList.append(storedIndex)
+
+unique_IDs = set(unitID_column)
+sorted_IDs = sorted(unique_IDs)
+
+UnitIDs = []
+for index in indexList:
+    UnitIDs.append(sorted_IDs[index])
+
+# inputting zeros to make all units the same size
+#inputting 0 values to make same length arrays
+count = -1
+for unit in Newlenarray:  
+    count +=1       
+    if len(unit) < 5:
+        for zeros in range(len(unit), 5):
+            Newlenarray[count].append(0)
+lenarray = Newlenarray
+
 
 #separating branch values for length
 branch1Array = []
@@ -176,7 +282,7 @@ sorted_IDs = sorted(unique_IDs)
 
 # making the bar plot
 myData = {
-    'Category': sorted_IDs,
+    'Category': UnitIDs,
     'Branch1': branch1Array,
     'Branch2': branch2Array,
     'Branch3': branch3Array,
@@ -202,19 +308,50 @@ plt.bar([pos + 4*bar_width for pos in positions], df['Branch5'], width=bar_width
 # Add more plt.bar() calls for additional sets of bars
 
 # Add labels, title, and legend
-plt.xlabel('UnitID')
-plt.ylabel('Lengths')
-plt.title('Grouped Bar Plot')
+plt.xlabel('Identified Putative Neuron')
+plt.ylabel('Branch Lengths')
+#plt.title('Grouped Bar Plot')
 plt.xticks([pos + bar_width / 10 for pos in positions], df['Category'])
 plt.legend()
 plt.tick_params(axis='both', which='major', labelsize=6)
+plt.savefig('Branch Lengths Bar Plot.jpg', dpi=600, format='jpg')
 # Show the plot
 plt.show()
 
+# flattening lenarray 
 
+# Flatten the larger array to remove inner arrays
+flattenedlenarray = [item for sublist in lenarray for item in sublist]
+zero = 0
+while zero in flattenedlenarray:
+    flattenedlenarray.remove(zero)
+y0 = flattenedlenarray
+df = pd.DataFrame({'Identified_Putative_Neurons':[' ']*len(y0), 'Branch_Lengths': y0, 'color':np.random.choice([0,1,2,3,4,5,6,7,8,9], size=len(y0), replace=True)})
+fig = px.strip(df,
+         x='Identified_Putative_Neurons',
+         y='Branch_Lengths',
+         color='color',
+         stripmode='overlay')
+fig.add_trace(go.Box(y=df.query('Identified_Putative_Neurons == " "')['Branch_Lengths'], name=' '))
+fig.update_layout(autosize=False,
+                  width=600,
+                  height=600,
+                  legend={'traceorder':'normal'})
+
+fig.show()
+
+'''
+#box and whisker for velocities over entire chip
+plt.boxplot(flattenedlenarray, showfliers=True)
+#plt.title("Box and Whisker Plot of AP Velocities Over Entire Chip")
+plt.xlabel("Identified Putative Neurons")
+plt.ylabel('Branch Lengths')
+plt.xticks([])
+plt.savefig('Branch Lengths Box and Whisker Plot.jpg', dpi=600, format='jpg')
+plt.show()'''
 # making box and whisker plots for each neuron for velocity
 # need to edit velarray to not include units with just one branch
-value_to_remove = 0
+'''value_to_remove = 0
 for unit in velarray:
     while value_to_remove in unit:
         unit.remove(value_to_remove)
@@ -232,7 +369,7 @@ for unit in velarray:
 
 UnitIDs = []
 for index in indexList:
-    UnitIDs.append(sorted_IDs[index])
+    UnitIDs.append(sorted_IDs[index])'''
 
 # dictionary for unitid values to be used for x ticks
 unitidValues = {
@@ -261,21 +398,25 @@ def annotate_boxplot(data, xpos, offset):
     plt.xticks([pos + bar_width / 10 for pos in ticks], df['UnitIDs'] )
     plt.tick_params(axis='both', which='major', labelsize=8)
 
-for i, data in enumerate(Newvelarray, start=1):
+value_to_remove = 0
+for unit in velarray:
+    while value_to_remove in unit:
+        unit.remove(value_to_remove)
+for i, data in enumerate(velarray, start=1):
     plt.boxplot(data, positions=[i-1])
     annotate_boxplot(data, i, 10)
 plt.show() 
 
 # making box and whisker plots for each neuron for length
 # need to edit lenarray to not include units with just one branch
-value_to_remove = 0
+'''value_to_remove = 0
 for unit in lenarray:
     while value_to_remove in unit:
-        unit.remove(value_to_remove)
+        unit.remove(value_to_remove)'''
 
 # making list of indices for which units have more than one branch
 
-storedIndex = -1
+'''storedIndex = -1
 Newlenarray = []
 indexList = []
 for unit in lenarray:
@@ -286,7 +427,7 @@ for unit in lenarray:
 
 UnitIDs = []
 for index in indexList:
-    UnitIDs.append(sorted_IDs[index])
+    UnitIDs.append(sorted_IDs[index])'''
 
 
 # Function to annotate box plots
@@ -307,11 +448,15 @@ def annotate_boxplot(data, xpos, offset):
     plt.title('Branch Lengths of Each Neuron')
     plt.xticks([pos + bar_width / 10 for pos in ticks], df['UnitIDs'] )
     plt.tick_params(axis='both', which='major', labelsize=8)
-
-for i, data in enumerate(Newlenarray, start=1):
+value_to_remove = 0
+for unit in lenarray:
+    while value_to_remove in unit:
+        unit.remove(value_to_remove)
+for i, data in enumerate(lenarray, start=1):
     plt.boxplot(data, positions=[i-1])
     annotate_boxplot(data, i, 10)
 plt.show() 
+
 
 
 
